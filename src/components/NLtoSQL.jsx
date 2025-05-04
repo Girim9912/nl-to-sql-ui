@@ -1,161 +1,119 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import axios from "axios";
-import { Mic, Upload, Sparkles } from "lucide-react";
+import backgroundImage from "../assets/BackgroundIMG.png"; // ✅ background image
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const NLtoSQL = () => {
+  const [file, setFile] = useState(null);
+  const [tableSchema, setTableSchema] = useState("");
   const [query, setQuery] = useState("");
-  const [result, setResult] = useState(null);
-  const [sql, setSQL] = useState("");
-  const [history, setHistory] = useState([]);
-  const [isRecording, setIsRecording] = useState(false);
-  const recognitionRef = useRef(null);
+  const [sqlResult, setSqlResult] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // Setup Speech Recognition
-  useEffect(() => {
-    if (!("webkitSpeechRecognition" in window)) {
-      console.warn("Speech Recognition not supported");
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+    setError("");
+  };
+
+  const handleUpload = async () => {
+    if (!file) {
+      setError("Please select a file first.");
       return;
     }
 
-    const recognition = new webkitSpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = "en-US";
+    const formData = new FormData();
+    formData.append("file", file);
 
-    recognition.onstart = () => setIsRecording(true);
-    recognition.onend = () => setIsRecording(false);
-    recognition.onerror = (e) => {
-      console.error("Speech error:", e);
-      setIsRecording(false);
-    };
+    setLoading(true);
+    setError("");
 
-    recognition.onresult = (e) => {
-      const transcript = e.results[0][0].transcript;
-      setQuery((prev) => `${prev} ${transcript}`);
-    };
-
-    recognitionRef.current = recognition;
-  }, []);
-
-  const handleVoice = () => {
-    if (isRecording) {
-      recognitionRef.current.stop();
-    } else {
-      recognitionRef.current.start();
+    try {
+      const response = await axios.post(`${API_URL}/upload`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setTableSchema(response.data.schema);
+    } catch (err) {
+      setError("Upload failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSubmit = async () => {
-    try {
-      const res = await axios.post(`${API_BASE}/generate-sql`, { query });
-      setSQL(res.data.sql);
-      setResult(res.data.results || []);
-      setHistory([{ query, sql: res.data.sql }, ...history]);
-    } catch (err) {
-      console.error("🔥 Error:", err);
-      setSQL("-- Error generating SQL");
+  const handleQuery = async () => {
+    if (!query) {
+      setError("Please enter a query.");
+      return;
     }
-  };
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    setLoading(true);
+    setError("");
+
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      await axios.post(`${API_BASE}/upload-db`, formData);
-      alert("✅ File uploaded successfully");
+      const response = await axios.post(`${API_URL}/query`, { query });
+      setSqlResult(response.data.result);
     } catch (err) {
-      console.error("Upload error:", err);
-      alert("❌ Upload failed");
+      setError("Failed to run query.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto text-black">
-      <h1 className="text-3xl font-bold mb-4">NL → SQL AI Playground</h1>
+    <div
+      className="min-h-screen bg-cover bg-center p-4 text-white"
+      style={{ backgroundImage: `url(${backgroundImage})` }}
+    >
+      <div className="bg-black bg-opacity-60 rounded-xl max-w-4xl mx-auto p-8 shadow-2xl">
+        <h1 className="text-3xl font-bold mb-6 text-center">NL to SQL Converter</h1>
 
-      <div className="flex items-center gap-2 mb-4">
-        <input
-          className="border p-2 rounded w-full"
-          value={query}
-          placeholder="Enter your natural language query"
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <button
-          onClick={handleVoice}
-          className={`p-2 rounded ${isRecording ? "bg-red-500" : "bg-gray-300"}`}
-        >
-          <Mic size={20} />
-        </button>
-        <button
-          onClick={handleSubmit}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          <Sparkles className="inline mr-2" size={18} />
-          Generate SQL
-        </button>
+        <div className="mb-4">
+          <input
+            type="file"
+            onChange={handleFileChange}
+            className="mb-2 block w-full text-black"
+          />
+          <button
+            onClick={handleUpload}
+            className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Upload
+          </button>
+        </div>
+
+        {tableSchema && (
+          <div className="bg-gray-900 p-4 rounded mb-4">
+            <h2 className="text-lg font-semibold mb-2">Detected Table Schema:</h2>
+            <pre className="whitespace-pre-wrap">{tableSchema}</pre>
+          </div>
+        )}
+
+        <div className="mb-4">
+          <textarea
+            placeholder="Enter your natural language query..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full p-3 rounded text-black"
+          />
+          <button
+            onClick={handleQuery}
+            className="mt-2 bg-green-600 px-4 py-2 rounded hover:bg-green-700"
+          >
+            Run Query
+          </button>
+        </div>
+
+        {sqlResult && (
+          <div className="bg-gray-900 p-4 rounded mb-4">
+            <h2 className="text-lg font-semibold mb-2">SQL Result:</h2>
+            <pre className="whitespace-pre-wrap">{sqlResult}</pre>
+          </div>
+        )}
+
+        {error && <div className="text-red-400 mt-2">{error}</div>}
+        {loading && <div className="text-yellow-300 mt-2">Loading...</div>}
       </div>
-
-      <div className="mb-4">
-        <label className="block mb-1 font-medium">📁 Upload Your Data</label>
-        <input
-          type="file"
-          accept=".csv,.xlsx,.xls,.db,.txt"
-          onChange={handleFileUpload}
-          className="w-full border p-2 rounded"
-        />
-      </div>
-
-      {sql && (
-        <div className="bg-gray-100 p-4 rounded mb-4">
-          <strong className="block mb-2">Generated SQL:</strong>
-          <pre className="whitespace-pre-wrap">{sql}</pre>
-        </div>
-      )}
-
-      {result && result.length > 0 && (
-        <div className="overflow-auto">
-          <table className="table-auto border-collapse border border-gray-400 w-full">
-            <thead>
-              <tr>
-                {Object.keys(result[0]).map((key) => (
-                  <th className="border px-4 py-2 bg-gray-200" key={key}>
-                    {key}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {result.map((row, idx) => (
-                <tr key={idx}>
-                  {Object.values(row).map((val, i) => (
-                    <td className="border px-4 py-2" key={i}>
-                      {val}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {history.length > 0 && (
-        <div className="mt-6">
-          <h2 className="text-xl font-semibold mb-2">🕓 Query History</h2>
-          {history.map((entry, i) => (
-            <div key={i} className="mb-3 p-3 bg-gray-50 border rounded">
-              <p className="font-semibold">🗣️ {entry.query}</p>
-              <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">
-                💾 {entry.sql}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 };
