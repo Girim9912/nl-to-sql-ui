@@ -4,7 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+<<<<<<< HEAD
     "homepage": "https://Girim9912.github.io/nltosql-ai/",
+=======
+>>>>>>> c767129a4e45671021ac35b1768e054d530ce684
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
@@ -13,10 +16,22 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+<<<<<<< HEAD
     "axios": "^1.8.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-speech-recognition": "^4.0.0"
+=======
+    "@radix-ui/react-icons": "^1.3.2",
+    "axios": "^1.8.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.506.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-speech-recognition": "^4.0.0",
+    "tailwindcss-animate": "^1.0.7"
+>>>>>>> c767129a4e45671021ac35b1768e054d530ce684
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
