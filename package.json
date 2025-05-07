@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "homepage": "https://Girim9912.github.io/nltosql-ai/",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
